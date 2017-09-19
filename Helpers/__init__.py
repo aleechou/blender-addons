@@ -25,7 +25,7 @@ class CursorToSelected(bpy.types.Operator):
     bl_idname = "view3d.cursor_to_selecteds"
     bl_label = "cursor to selected"
     bl_options = {'REGISTER', 'UNDO'}
-    
+
     def execute(self, context):
         for area in bpy.context.screen.areas:
             if area.type == 'VIEW_3D':
@@ -36,18 +36,18 @@ class CursorToSelected(bpy.types.Operator):
                 break
         return {"FINISHED"}
 
-    
-    
-    
+
+
+
 class SetOriginToSelected(bpy.types.Operator):
     bl_idname = "view3d.set_origin_to_selected"
     bl_label = "set origin to selected"
     bl_options = {'REGISTER', 'UNDO'}
-    
+
     def execute(self, context):
-        
+
         print("SetOriginToSelected")
-    
+
         ori_cursor_location = bpy.context.scene.cursor_location
         print(ori_cursor_location)
 
@@ -58,7 +58,7 @@ class SetOriginToSelected(bpy.types.Operator):
                 ctx['region'] = area.regions[-1]
                 bpy.ops.view3d.snap_cursor_to_selected(ctx)
                 break
-                    
+
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
         bpy.ops.object.mode_set(mode='EDIT')
@@ -112,8 +112,13 @@ class UIHelper(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        obj = context.object
+        layout.row()
         layout.operator(CreateCenterPotinOfSelecteds.bl_idname, text="创建中点")
+        layout.row()
+        layout.operator(MoveSelectedsToActive.bl_idname, text="移动:选中>活动")
+        layout.operator(MoveObjectToCursor.bl_idname, text="移动:活动>游标")
+        layout.operator(CursorToSelected.bl_idname, text="移动:游游标>选中中点")
+        layout.operator(CursorToSelected.bl_idname, text="设置:原点>选中中点")
     
     
 # store keymaps here to access after registration
