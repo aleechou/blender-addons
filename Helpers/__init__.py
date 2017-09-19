@@ -38,6 +38,50 @@ class CursorToSelected(bpy.types.Operator):
 
 
 
+class DifferenceOfObjects(bpy.types.Operator):
+    bl_idname = "view3d.difference_of_objects"
+    bl_label = "Difference of Objects"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        ori_active = context.object
+        ori_seleted = bpy.context.selected_objects.copy()
+
+        bpy.context.scene.objects.active = None
+        for obj in ori_seleted :
+            obj.select = False
+
+        print("active obj", ori_active)
+        print("seleteds obj", ori_seleted)
+
+        print("context.object =", context.object)
+        print("bpy.context.selected_objects =", bpy.context.selected_objects)
+
+        for obj in ori_seleted :
+            if obj == ori_active :
+                print("--", obj)
+                continue
+
+            print("..", obj)
+
+            bpy.context.scene.objects.active = obj
+
+            bpy.ops.object.modifier_add(type="BOOLEAN")
+
+            modifier = context.object.modifiers.values().pop()
+            modifier.operation = "DIFFERENCE"
+            print(context.object, "-", ori_active)
+            modifier.object = ori_active
+
+            obj.select = False
+
+        for obj in ori_seleted:
+            obj.select = True
+        ori_active.select = True
+
+        return {"FINISHED"}
+
+
 
 class SetOriginToSelected(bpy.types.Operator):
     bl_idname = "view3d.set_origin_to_selected"
@@ -113,12 +157,14 @@ class UIHelper(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         layout.row()
+        layout.operator(DifferenceOfObjects.bl_idname, text="布尔差集:选中-活动")
+        layout.row()
         layout.operator(CreateCenterPotinOfSelecteds.bl_idname, text="创建中点")
         layout.row()
         layout.operator(MoveSelectedsToActive.bl_idname, text="移动:选中>活动")
         layout.operator(MoveObjectToCursor.bl_idname, text="移动:活动>游标")
         layout.operator(CursorToSelected.bl_idname, text="移动:游游标>选中中点")
-        layout.operator(CursorToSelected.bl_idname, text="设置:原点>选中中点")
+        layout.operator(SetOriginToSelected.bl_idname, text="设置:原点>选中中点")
     
     
 # store keymaps here to access after registration
@@ -131,8 +177,9 @@ def register():
     bpy.utils.register_class(MoveSelectedsToActive)
     bpy.utils.register_class(MoveObjectToCursor)
     bpy.utils.register_class(CreateCenterPotinOfSelecteds)
+    bpy.utils.register_class(DifferenceOfObjects)
     bpy.utils.register_class(UIHelper)
-    
+
     # handle the keymap
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
@@ -153,6 +200,7 @@ def unregister():
     bpy.utils.unregister_class(MoveSelectedsToActive)
     bpy.utils.unregister_class(MoveObjectToCursor)
     bpy.utils.unregister_class(CreateCenterPotinOfSelecteds)
+    bpy.utils.unregister_class(DifferenceOfObjects)
     bpy.utils.unregister_class(UIHelper)
 
     for km, kmi in addon_keymaps:
