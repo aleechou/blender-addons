@@ -74,19 +74,35 @@ class ExportSelectionToStl(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class UIExporter(bpy.types.Panel):
+    """Creates a Panel in the Object properties window"""
+    bl_label = "Export What You Want to STL"
+    bl_idname = "UIExporter"
+    bl_region_type = 'TOOLS'
+    bl_space_type = 'VIEW_3D'
+    bl_category = 'Tools'
+
+    def draw(self, context):
+        layout = self.layout
+        obj = context.object
+
+        row = layout.row()
+        row.prop(obj, "is_export_to_stl", text="导出为独立的STL文件")
 
 
 def register():
+    print("register(Export What You Want to STL)")
     bpy.types.Object.is_export_to_stl = BoolProperty()
     bpy.types.Object.stl_filename = StringProperty()
-    bpy.utils.register_class(LayoutDemoPanel)
+
     bpy.utils.register_class(ExportSelectionToStl)
+    bpy.utils.register_class(UIExporter)
 
 
 
 def unregister():
-    bpy.utils.unregister_class(LayoutDemoPanel)
     bpy.utils.unregister_class(ExportSelectionToStl)
+    bpy.utils.unregister_class(UIExporter)
 
 
 if __name__ == "__main__":
