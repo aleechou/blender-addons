@@ -8,27 +8,6 @@ import os
 
 from bpy.props import BoolProperty, StringProperty
 
-class LayoutDemoPanel(bpy.types.Panel):
-    """Creates a Panel in the scene context of the properties editor"""
-    bl_label = "Export What You Want to STL"
-    bl_idname = "export_what_you_want_to_stl"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "object"
-
-    def draw(self, context):
-        layout = self.layout
-
-        obj = context.object
-        
-        row = layout.row()
-        row.prop(obj, "is_export_to_stl", text="导出为独立的STL文件")
-        
-        row = layout.row()
-        row.prop(obj, "stl_filename", text="STL文件名")
-        layout.label(text="(不需要扩展名；如果为空，则使用物体名)")
-
-
 
 class ExportSelectionToStl(bpy.types.Operator):
     bl_idname = "view3d.export_selection_to_stl"
@@ -87,7 +66,10 @@ class UIExporter(bpy.types.Panel):
         obj = context.object
 
         row = layout.row()
-        row.prop(obj, "is_export_to_stl", text="导出为独立的STL文件")
+        row.prop(obj, "is_export_to_stl", text="导出这个物体")
+
+        row = layout.row()
+        row.operator(ExportSelectionToStl.bl_idname, text="导出为独立的STL文件")
 
 
 def register():
