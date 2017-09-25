@@ -69,7 +69,7 @@ class UIExporter(bpy.types.Panel):
         row.prop(obj, "is_export_to_stl", text="导出这个物体")
 
         row = layout.row()
-        row.operator(ExportSelectionToStl.bl_idname, text="导出为独立的STL文件")
+        row.operator(ExportSelectionToStl.bl_idname, text="导出所有物体")
 
 
 def register():
