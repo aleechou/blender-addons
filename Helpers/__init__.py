@@ -5,6 +5,15 @@ bl_info = {
 
 import bpy
 from mathutils import Vector
+from bpy.props import FloatProperty
+import bmesh
+
+def activeVertex(context) :
+    bm = bmesh.from_edit_mesh(context.object.data)
+    print(bm.select_history)
+    for elem in reversed(bm.select_history):
+        if isinstance(elem, bmesh.types.BMVert):
+            return elem
 
 
 
@@ -146,6 +155,43 @@ class MoveObjectToCursor(bpy.types.Operator):
         context.scene.objects.active.location = context.scene.cursor_location
         return {"FINISHED"}
 
+
+class SlideVertAlongLine(bpy.types.Operator):
+    bl_idname = "view3d.slide_vert_along_line"
+    bl_label = "slide vertex along line to another vvertexect"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    distance = FloatProperty(0)
+    
+    def execute(self, context):
+
+        bm = bmesh.from_edit_mesh(context.object.data)
+
+        # 选中的活动顶点
+        actived = None
+        for vert in reversed(bm.select_history):
+            if isinstance(vert, bmesh.types.BMVert) and vert.select:
+                actived = vert
+                break
+        if actived==None:
+            return {"FINISHED"}
+
+        selected = None
+        for vert in bm.verts:
+            if vert.select and vert!=actived :
+                selected = vert
+                break
+        if selected==None:
+            return {"FINISHED"}
+
+        betw = selected.co - actived.co
+        betw = betw * (self.distance/betw.length)
+        actived.co+= betw
+
+        return {"FINISHED"}
+    
+
+    
 class UIHelper(bpy.types.Panel):
     """Creates a Panel in the Object properties window"""
     bl_label = "Helper"
@@ -165,6 +211,10 @@ class UIHelper(bpy.types.Panel):
         layout.operator(MoveObjectToCursor.bl_idname, text="移动:活动>游标")
         layout.operator(CursorToSelected.bl_idname, text="移动:游游标>选中中点")
         layout.operator(SetOriginToSelected.bl_idname, text="设置:原点>选中中点")
+        row = layout.row()
+        row.operator(SlideVertAlongLine.bl_idname, text="滑动:活动点->选中点")
+
+
     
     
 # store keymaps here to access after registration
@@ -178,6 +228,7 @@ def register():
     bpy.utils.register_class(MoveObjectToCursor)
     bpy.utils.register_class(CreateCenterPotinOfSelecteds)
     bpy.utils.register_class(DifferenceOfObjects)
+    bpy.utils.register_class(SlideVertAlongLine)
     bpy.utils.register_class(UIHelper)
 
     # handle the keymap
@@ -200,7 +251,7 @@ def unregister():
     bpy.utils.unregister_class(MoveSelectedsToActive)
     bpy.utils.unregister_class(MoveObjectToCursor)
     bpy.utils.unregister_class(CreateCenterPotinOfSelecteds)
-    bpy.utils.unregister_class(DifferenceOfObjects)
+    bpy.utils.unregister_class(SlideVertAlongLine)
     bpy.utils.unregister_class(UIHelper)
 
     for km, kmi in addon_keymaps:
