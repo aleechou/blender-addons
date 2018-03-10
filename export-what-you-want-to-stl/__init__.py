@@ -68,7 +68,10 @@ class UIExporter(bpy.types.Panel):
         obj = context.object
 
         row = layout.row()
-        row.prop(obj, "is_export_to_stl", text="导出这个物体")
+        try:
+            row.prop(obj, "is_export_to_stl", text="导出这个物体")
+        except BaseException:
+            return
 
         row = layout.row()
         op = row.operator(ExportSelectionToStl.bl_idname, text="导出勾选")
