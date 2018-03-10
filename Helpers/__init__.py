@@ -176,22 +176,49 @@ class SlideVertAlongLine(bpy.types.Operator):
         if actived==None:
             return {"FINISHED"}
 
-        selected = None
+        # 所有 选中点 向 活动点 滑动指定距离
         for vert in bm.verts:
             if vert.select and vert!=actived :
-                selected = vert
-                break
-        if selected==None:
-            return {"FINISHED"}
-
-        betw = selected.co - actived.co
-        betw = betw * (self.distance/betw.length)
-        actived.co+= betw
+                betw = actived.co - vert.co
+                betw = betw * (self.distance/betw.length)
+                vert.co+= betw
 
         return {"FINISHED"}
     
 
+
+class MoveBackFaces(bpy.types.Operator):
+    bl_idname = "view3d.move_back_faces"
+    bl_label = "move back selected faces"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    distance = FloatProperty(0.2)
     
+    def execute(self, context):
+
+        mesh = bmesh.from_edit_mesh(bpy.context.edit_object.data)
+        scale = bpy.context.edit_object.scale
+
+        for face in mesh.faces:
+            if not face.select :
+                continue
+            
+            move = face.normal * (-self.distance)
+            move[0] = move[0] / scale[0]
+            move[1] = move[1] / scale[1]
+            move[2] = move[2] / scale[2]
+            
+            for v in face.verts:
+                v.co+= move
+
+        # mesh.faces[0].select = True
+        bmesh.update_edit_mesh(bpy.context.edit_object.data, True)
+
+        return {"FINISHED"}
+    
+
+
+
 class UIHelper(bpy.types.Panel):
     """Creates a Panel in the Object properties window"""
     bl_label = "Helper"
@@ -212,7 +239,10 @@ class UIHelper(bpy.types.Panel):
         layout.operator(CursorToSelected.bl_idname, text="移动:游游标>选中中点")
         layout.operator(SetOriginToSelected.bl_idname, text="设置:原点>选中中点")
         row = layout.row()
-        row.operator(SlideVertAlongLine.bl_idname, text="滑动:活动点->选中点")
+        row.operator(SlideVertAlongLine.bl_idname, text="滑动:选中点>活动点")
+        row = layout.row()
+        op = row.operator(MoveBackFaces.bl_idname, text="后移:选中[面]沿法向")
+
 
 
     
@@ -229,6 +259,7 @@ def register():
     bpy.utils.register_class(CreateCenterPotinOfSelecteds)
     bpy.utils.register_class(DifferenceOfObjects)
     bpy.utils.register_class(SlideVertAlongLine)
+    bpy.utils.register_class(MoveBackFaces)
     bpy.utils.register_class(UIHelper)
 
     # handle the keymap
@@ -253,6 +284,7 @@ def unregister():
     bpy.utils.unregister_class(CreateCenterPotinOfSelecteds)
     bpy.utils.unregister_class(SlideVertAlongLine)
     bpy.utils.unregister_class(UIHelper)
+    bpy.utils.unregister_class(MoveBackFaces)
 
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
