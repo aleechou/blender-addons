@@ -158,7 +158,7 @@ class MoveObjectToCursor(bpy.types.Operator):
 
 class SlideVertAlongLine(bpy.types.Operator):
     bl_idname = "view3d.slide_vert_along_line"
-    bl_label = "slide vertex along line to another vvertexect"
+    bl_label = "所有[选中点],沿到[活动点]方向滑动"
     bl_options = {'REGISTER', 'UNDO'}
 
     distance = FloatProperty(0)
@@ -217,6 +217,69 @@ class MoveBackFaces(bpy.types.Operator):
         return {"FINISHED"}
     
 
+def includes(array, item) :
+    for i in array:
+        if i==item :
+            return True
+    return False
+
+# http://blog.sina.com.cn/s/blog_8f050d6b0101crwb.html
+class CreateCrossLineAndFace(bpy.types.Operator):
+    bl_idname = "view3d.create_cross_line_and_face"
+    bl_label = "create cross point of selected line & face"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        
+        mesh = bmesh.from_edit_mesh(bpy.context.edit_object.data)
+        if mesh.faces.active == None :
+            return
+
+        print(mesh.edges)
+        activeEdge = None
+        for edge in mesh.edges:
+            if edge.select and not includes(mesh.faces.active.edges, edge) :
+                activeEdge = edge
+                break
+
+        print("..",activeEdge)
+
+        if activeEdge == None :
+            return {"FINISHED"}
+
+        # 平面法向量
+        vp1 = mesh.faces.active.normal[0]
+        vp2 = mesh.faces.active.normal[1]
+        vp3 = mesh.faces.active.normal[2]
+
+        # 平面任意一点
+        n1 = mesh.faces.active.edges[0].verts[0].co[0]
+        n2 = mesh.faces.active.edges[0].verts[0].co[1]
+        n3 = mesh.faces.active.edges[0].verts[0].co[2]
+
+        # 边上的任意两点
+        m1 = activeEdge.verts[0].co[0]
+        m2 = activeEdge.verts[0].co[1]
+        m3 = activeEdge.verts[0].co[2]
+
+        v = activeEdge.verts[1].co - activeEdge.verts[0].co
+        v1 = v[0]
+        v2 = v[1]
+        v3 = v[2]
+
+        t = ((n1-m1)*vp1+(n2-m2)*vp2+(n3-m3)*vp3) / (vp1* v1+ vp2* v2+ vp3* v3)
+
+        x = m1+ v1 * t
+        y = m2+ v2 * t
+        z = m3+ v3 * t
+
+        vertex = mesh.verts.new([x,y,z])
+        bmesh.update_edit_mesh(context.object.data, False, True)
+
+        print(vertex.co)
+        
+
+        return {"FINISHED"}
 
 
 class UIHelper(bpy.types.Panel):
@@ -232,16 +295,21 @@ class UIHelper(bpy.types.Panel):
         layout.row()
         layout.operator(DifferenceOfObjects.bl_idname, text="布尔差集:选中-活动")
         layout.row()
-        layout.operator(CreateCenterPotinOfSelecteds.bl_idname, text="创建中点")
+        layout.row()
+        layout.operator(CreateCenterPotinOfSelecteds.bl_idname, text="创建:中点")
+        layout.operator(SetOriginToSelected.bl_idname, text="设置:原点>选中中点")
+        layout.row()
         layout.row()
         layout.operator(MoveSelectedsToActive.bl_idname, text="移动:选中>活动")
         layout.operator(MoveObjectToCursor.bl_idname, text="移动:活动>游标")
-        layout.operator(CursorToSelected.bl_idname, text="移动:游游标>选中中点")
-        layout.operator(SetOriginToSelected.bl_idname, text="设置:原点>选中中点")
-        row = layout.row()
-        row.operator(SlideVertAlongLine.bl_idname, text="滑动:选中点>活动点")
-        row = layout.row()
-        op = row.operator(MoveBackFaces.bl_idname, text="后移:选中[面]沿法向")
+        layout.operator(CursorToSelected.bl_idname, text="移动:游标>选中中点")
+        layout.operator(SlideVertAlongLine.bl_idname, text="滑动:选中点>活动点")
+        layout.row()
+        layout.row()
+        layout.operator(MoveBackFaces.bl_idname, text="后移:选中[面]沿法向")
+        layout.operator(CreateCrossLineAndFace.bl_idname, text="创建:选中[边+面]交点")
+        # layout.operator(MoveBackFaces.bl_idname, text="创建:选中[线+线]交点")
+        # layout.operator(MoveBackFaces.bl_idname, text="创建:选中[线+线]中垂线")
 
 
 
@@ -259,6 +327,7 @@ def register():
     bpy.utils.register_class(CreateCenterPotinOfSelecteds)
     bpy.utils.register_class(DifferenceOfObjects)
     bpy.utils.register_class(SlideVertAlongLine)
+    bpy.utils.register_class(CreateCrossLineAndFace)
     bpy.utils.register_class(MoveBackFaces)
     bpy.utils.register_class(UIHelper)
 
@@ -283,6 +352,7 @@ def unregister():
     bpy.utils.unregister_class(MoveObjectToCursor)
     bpy.utils.unregister_class(CreateCenterPotinOfSelecteds)
     bpy.utils.unregister_class(SlideVertAlongLine)
+    bpy.utils.unregister_class(CreateCrossLineAndFace)
     bpy.utils.unregister_class(UIHelper)
     bpy.utils.unregister_class(MoveBackFaces)
 
