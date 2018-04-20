@@ -7,6 +7,7 @@ import bpy
 from mathutils import Vector
 from bpy.props import FloatProperty
 import bmesh
+from bpy.props import BoolProperty
 
 def activeVertex(context) :
     bm = bmesh.from_edit_mesh(context.object.data)
@@ -145,6 +146,43 @@ class MoveSelectedsToActive(bpy.types.Operator):
         return {"FINISHED"}
 
 
+# 返回活动定点（选中历史中最后一个被选中的）
+def activedVert(bm):
+    for vert in reversed(bm.select_history):
+        if isinstance(vert, bmesh.types.BMVert) and vert.select:
+            return vert
+    return None
+
+class MovePointsSelectedsToActive(bpy.types.Operator):
+    bl_idname = "view3d.move_selecteds_to_active"
+    bl_label = "move selecteds to active"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    xAxe = BoolProperty(default=False)
+    yAxe = BoolProperty(default=False)
+    zAxe = BoolProperty(default=False)
+
+    def execute(self, context):
+        
+        bm = bmesh.from_edit_mesh(context.object.data)
+
+        # 选中的活动顶点
+        actived = activedVert(bm)
+        if actived==None:
+            print("there is no actived vert")
+            return {"FINISHED"}
+
+        for vert in bm.verts:
+            if vert.select and vert!=actived :
+                if self.xAxe :
+                    vert.co[0] = actived.co[0]
+                if self.yAxe :
+                    vert.co[1] = actived.co[1]
+                if self.zAxe :
+                    vert.co[2] = actived.co[2]
+
+        return {"FINISHED"}
+
     
 class MoveObjectToCursor(bpy.types.Operator):
     bl_idname = "view3d.move_object_to_cursor"
@@ -168,12 +206,9 @@ class SlideVertAlongLine(bpy.types.Operator):
         bm = bmesh.from_edit_mesh(context.object.data)
 
         # 选中的活动顶点
-        actived = None
-        for vert in reversed(bm.select_history):
-            if isinstance(vert, bmesh.types.BMVert) and vert.select:
-                actived = vert
-                break
+        actived = activedVert(bm)
         if actived==None:
+            print("there is no actived vert")
             return {"FINISHED"}
 
         # 所有 选中点 向 活动点 滑动指定距离
@@ -303,13 +338,15 @@ class UIHelper(bpy.types.Panel):
         layout.operator(MoveSelectedsToActive.bl_idname, text="移动:选中>活动")
         layout.operator(MoveObjectToCursor.bl_idname, text="移动:活动>游标")
         layout.operator(CursorToSelected.bl_idname, text="移动:游标>选中中点")
+        layout.row()
+        layout.operator(MovePointsSelectedsToActive.bl_idname, text="移动:选中点>活动点")
         layout.operator(SlideVertAlongLine.bl_idname, text="滑动:选中点>活动点")
         layout.row()
         layout.row()
         layout.operator(MoveBackFaces.bl_idname, text="后移:选中[面]沿法向")
-        layout.operator(CreateCrossLineAndFace.bl_idname, text="创建:选中[边+面]交点")
-        # layout.operator(MoveBackFaces.bl_idname, text="创建:选中[线+线]交点")
-        # layout.operator(MoveBackFaces.bl_idname, text="创建:选中[线+线]中垂线")
+        layout.operator(CreateCrossLineAndFace.bl_idname, text="创建:选中[边&面]交点")
+        # layout.operator(MoveBackFaces.bl_idname, text="创建:选中[边&边]交点")
+        # layout.operator(MoveBackFaces.bl_idname, text="创建:选中[边&边]中垂线")
 
 
 
@@ -323,6 +360,7 @@ def register():
     bpy.utils.register_class(CursorToSelected)
     bpy.utils.register_class(SetOriginToSelected)
     bpy.utils.register_class(MoveSelectedsToActive)
+    bpy.utils.register_class(MovePointsSelectedsToActive)
     bpy.utils.register_class(MoveObjectToCursor)
     bpy.utils.register_class(CreateCenterPotinOfSelecteds)
     bpy.utils.register_class(DifferenceOfObjects)
