@@ -15,6 +15,8 @@ class ExportSelectionToStl(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     export_all_objects = BoolProperty(default=False)
+    ascii = BoolProperty(default=False)
+    use_scene_unit = BoolProperty(default=False)
     
     def execute(self, context):
         
@@ -45,7 +47,7 @@ class ExportSelectionToStl(bpy.types.Operator):
             
             obj.select = True
         
-        bpy.ops.export_mesh.stl(filepath=dirpath, use_selection=True, batch_mode="OBJECT")
+        bpy.ops.export_mesh.stl(filepath=dirpath, use_selection=True, batch_mode="OBJECT", use_scene_unit=self.use_scene_unit, ascii=self.ascii)
             
             
         bpy.ops.object.select_all(action='DESELECT') 

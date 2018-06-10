@@ -4,10 +4,9 @@ bl_info = {
 }
 
 import bpy
-from mathutils import Vector
-from bpy.props import FloatProperty
 import bmesh
-from bpy.props import BoolProperty
+from mathutils import Vector
+from bpy.props import FloatProperty, FloatVectorProperty, BoolProperty
 
 def activeVertex(context) :
     bm = bmesh.from_edit_mesh(context.object.data)
@@ -49,6 +48,7 @@ class CursorToSelected(bpy.types.Operator):
 
 
 class DifferenceOfObjects(bpy.types.Operator):
+    """布尔差集"""
     bl_idname = "view3d.difference_of_objects"
     bl_label = "Difference of Objects"
     bl_options = {'REGISTER', 'UNDO'}
@@ -317,6 +317,73 @@ class CreateCrossLineAndFace(bpy.types.Operator):
         return {"FINISHED"}
 
 
+
+class SelectedVectorsCube(bpy.types.Operator):
+    """
+    计算并输出所有选中点的立方外边界
+    """
+    bl_idname = "view3d.selected_vectors_cube"
+    bl_label = "SelectedVectorsCube"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+
+        bm = bmesh.from_edit_mesh(context.object.data)
+
+        if len(bm.verts)<1 :
+            return {"FINISHED"}
+
+        maxx = minx = maxy = None
+        miny = maxz = minz = None
+
+        for vert in bm.verts:
+            if not vert.select :
+                continue
+            
+            if minx==None or vert.co[0]<minx : minx = vert.co[0]
+            if miny==None or vert.co[1]<miny : miny = vert.co[1]
+            if minz==None or vert.co[2]<minz : minz = vert.co[2]
+
+            if maxx==None or vert.co[0]>maxx : maxx = vert.co[0]
+            if maxy==None or vert.co[1]>maxy : maxy = vert.co[1]
+            if maxz==None or vert.co[2]>maxz : maxz = vert.co[2]
+
+        context.scene.SelectedVectorsCube[0] = maxx- minx
+        context.scene.SelectedVectorsCube[1] = maxy- miny
+        context.scene.SelectedVectorsCube[2] = maxz- minz
+
+        return {"FINISHED"}
+
+class SelectedVectorsDistance(bpy.types.Operator):
+    """
+    计算并输出两点距离
+    """
+    bl_idname = "view3d.selected_vectors_distance"
+    bl_label = "SelectedVectorsDistance"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+
+        bm = bmesh.from_edit_mesh(context.object.data)
+        p1 = p2 = None
+
+        for vert in bm.verts:
+            if not vert.select :
+                continue
+            if p1 == None :
+                p1 = vert.co
+                continue
+            elif p2 == None :
+                p2 = vert.co
+                break
+    
+        if not p1 or not p2 :
+            return {"FINISHED"}
+
+        context.scene.SelectedVectorsDistance = (p1-p2).length
+
+        return {"FINISHED"}
+
 class UIHelper(bpy.types.Panel):
     """Creates a Panel in the Object properties window"""
     bl_label = "Helper"
@@ -348,6 +415,13 @@ class UIHelper(bpy.types.Panel):
         # layout.operator(MoveBackFaces.bl_idname, text="创建:选中[边&边]交点")
         # layout.operator(MoveBackFaces.bl_idname, text="创建:选中[边&边]中垂线")
 
+        layout.row()
+        row = layout.row()
+        row.operator(SelectedVectorsCube.bl_idname, text="计算:[选中点]立方")
+        row.operator(SelectedVectorsDistance.bl_idname, text="计算:两点距离")
+        row = layout.row()
+        row.prop(context.scene, "SelectedVectorsCube", text="")
+        row.prop(context.scene, "SelectedVectorsDistance", text="")
 
 
     
@@ -356,7 +430,8 @@ class UIHelper(bpy.types.Panel):
 addon_keymaps = []
 
 def register():
-    print("register(Helper 1)")
+    print("register(Helper)")
+
     bpy.utils.register_class(CursorToSelected)
     bpy.utils.register_class(SetOriginToSelected)
     bpy.utils.register_class(MoveSelectedsToActive)
@@ -367,7 +442,11 @@ def register():
     bpy.utils.register_class(SlideVertAlongLine)
     bpy.utils.register_class(CreateCrossLineAndFace)
     bpy.utils.register_class(MoveBackFaces)
+    bpy.utils.register_class(SelectedVectorsCube)
+    bpy.utils.register_class(SelectedVectorsDistance)
     bpy.utils.register_class(UIHelper)
+
+
 
     # handle the keymap
     wm = bpy.context.window_manager
@@ -382,17 +461,24 @@ def register():
         addon_keymaps.append((km, km.keymap_items.new(MoveSelectedsToActive.bl_idname, 'W', 'PRESS', ctrl=True)))
         addon_keymaps.append((km, km.keymap_items.new(MoveObjectToCursor.bl_idname, 'W', 'PRESS', alt=True)))
 
+    bpy.types.Scene.SelectedVectorsCube = FloatVectorProperty(size=3)
+    bpy.types.Scene.SelectedVectorsDistance = FloatProperty()
+
 def unregister():
     print("unregister()")
     bpy.utils.unregister_class(CursorToSelected)
     bpy.utils.unregister_class(SetOriginToSelected)
     bpy.utils.unregister_class(MoveSelectedsToActive)
+    bpy.utils.unregister_class(MovePointsSelectedsToActive)
     bpy.utils.unregister_class(MoveObjectToCursor)
     bpy.utils.unregister_class(CreateCenterPotinOfSelecteds)
+    bpy.utils.unregister_class(DifferenceOfObjects)
     bpy.utils.unregister_class(SlideVertAlongLine)
     bpy.utils.unregister_class(CreateCrossLineAndFace)
-    bpy.utils.unregister_class(UIHelper)
     bpy.utils.unregister_class(MoveBackFaces)
+    bpy.utils.unregister_class(SelectedVectorsCube)
+    bpy.utils.unregister_class(SelectedVectorsDistance)
+    bpy.utils.unregister_class(UIHelper)
 
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
