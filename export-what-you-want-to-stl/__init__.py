@@ -13,6 +13,10 @@ class ExportSelectionToStl(bpy.types.Operator):
     bl_idname = "view3d.export_selection_to_stl"
     bl_label = "export selection to stl"
     bl_options = {'REGISTER', 'UNDO'}
+
+    export_all_objects = BoolProperty(default=False)
+    ascii = BoolProperty(default=False)
+    use_scene_unit = BoolProperty(default=False)
     
     def execute(self, context):
         
@@ -38,12 +42,12 @@ class ExportSelectionToStl(bpy.types.Operator):
             if obj.type!="MESH" :
                 continue
         
-            if not hasattr(obj, "is_export_to_stl"):
-                break
+            if not self.export_all_objects and not obj.is_export_to_stl:
+                continue
             
             obj.select = True
         
-        bpy.ops.export_mesh.stl(filepath=dirpath, use_selection=True, batch_mode="OBJECT")
+        bpy.ops.export_mesh.stl(filepath=dirpath, use_selection=True, batch_mode="OBJECT", use_scene_unit=self.use_scene_unit, ascii=self.ascii)
             
             
         bpy.ops.object.select_all(action='DESELECT') 
@@ -66,15 +70,21 @@ class UIExporter(bpy.types.Panel):
         obj = context.object
 
         row = layout.row()
-        row.prop(obj, "is_export_to_stl", text="导出这个物体")
+        try:
+            row.prop(obj, "is_export_to_stl", text="导出这个物体")
+        except BaseException:
+            return
 
         row = layout.row()
-        row.operator(ExportSelectionToStl.bl_idname, text="导出所有物体")
+        op = row.operator(ExportSelectionToStl.bl_idname, text="导出勾选")
+        op.export_all_objects = False
+        op = row.operator(ExportSelectionToStl.bl_idname, text="导出所有物体")
+        op.export_all_objects = True
 
 
 def register():
     print("register(Export What You Want to STL)")
-    bpy.types.Object.is_export_to_stl = BoolProperty()
+    bpy.types.Object.is_export_to_stl = BoolProperty(default=False)
     bpy.types.Object.stl_filename = StringProperty()
 
     bpy.utils.register_class(ExportSelectionToStl)
