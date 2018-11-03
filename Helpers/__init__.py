@@ -8,17 +8,6 @@ import bmesh
 from mathutils import Vector
 from bpy.props import FloatProperty, FloatVectorProperty, BoolProperty
 
-def activeVertex(context) :
-    bm = bmesh.from_edit_mesh(context.object.data)
-    print(bm.select_history)
-    for elem in reversed(bm.select_history):
-        if isinstance(elem, bmesh.types.BMVert):
-            return elem
-
-
-
-
-
 class CreateCenterPotinOfSelecteds(bpy.types.Operator):
     bl_idname = "view3d.create_center_potin_of_selecteds"
     bl_label = "Create Center Potin of Selecteds"
@@ -97,6 +86,7 @@ class SetOriginToSelected(bpy.types.Operator):
     bl_idname = "view3d.set_origin_to_selected"
     bl_label = "set origin to selected"
     bl_options = {'REGISTER', 'UNDO'}
+    # bl_rna = "view3d.set_origin_to_selected[bl_rna]"
 
     def execute(self, context):
 
@@ -354,6 +344,8 @@ class SelectedVectorsCube(bpy.types.Operator):
 
         return {"FINISHED"}
 
+
+
 class SelectedVectorsDistance(bpy.types.Operator):
     """
     计算并输出两点距离
@@ -384,6 +376,24 @@ class SelectedVectorsDistance(bpy.types.Operator):
 
         return {"FINISHED"}
 
+
+class OutputSelectedLocation(bpy.types.Operator):
+    """
+    输出所有选中点的本地坐标
+    """
+    bl_idname = "view3d.output_selected_location"
+    bl_label = "OutputSelectedLocation"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+
+        bm = bmesh.from_edit_mesh(context.object.data)
+        for vert in bm.verts:
+            if vert.select :
+                output(vert.co[0],",",vert.co[1],",",vert.co[2])
+
+        return {"FINISHED"}
+
 class UIHelper(bpy.types.Panel):
     """Creates a Panel in the Object properties window"""
     bl_label = "Helper"
@@ -408,6 +418,11 @@ class UIHelper(bpy.types.Panel):
         layout.row()
         layout.operator(MovePointsSelectedsToActive.bl_idname, text="移动:选中点>活动点")
         layout.operator(SlideVertAlongLine.bl_idname, text="滑动:选中点>活动点")
+
+        layout.row()
+        layout.row()
+        layout.operator(OutputSelectedLocation.bl_idname, text="输出选中点坐标")
+
         layout.row()
         layout.row()
         layout.operator(MoveBackFaces.bl_idname, text="后移:选中[面]沿法向")
@@ -423,6 +438,38 @@ class UIHelper(bpy.types.Panel):
         row.prop(context.scene, "SelectedVectorsCube", text="")
         row.prop(context.scene, "SelectedVectorsDistance", text="")
 
+
+def console_get():
+    for area in bpy.context.screen.areas:
+        if area.type == 'CONSOLE':
+            for space in area.spaces:
+                if space.type == 'CONSOLE':
+                    return area, space
+    return None, None
+
+
+def output(*args):
+    text = ""
+    for v in args:
+        if type(v) is str:
+            text += v + "  "
+        else:
+            text += str(v) + "  "
+
+    area, space = console_get()
+    if space is None:
+        for line in text.split("\n"):
+            print(line)
+        return
+
+    context = bpy.context.copy()
+    context.update(dict(
+        space=space,
+        area=area,
+    ))
+
+    for line in text.split("\n"):
+        bpy.ops.console.scrollback_append(context, text=line, type='OUTPUT')
 
     
     
@@ -444,6 +491,7 @@ def register():
     bpy.utils.register_class(MoveBackFaces)
     bpy.utils.register_class(SelectedVectorsCube)
     bpy.utils.register_class(SelectedVectorsDistance)
+    bpy.utils.register_class(OutputSelectedLocation)
     bpy.utils.register_class(UIHelper)
 
 
@@ -464,26 +512,33 @@ def register():
     bpy.types.Scene.SelectedVectorsCube = FloatVectorProperty(size=3)
     bpy.types.Scene.SelectedVectorsDistance = FloatProperty()
 
+def unregister_class(clazz):
+    try:
+        bpy.utils.unregister_class(clazz)
+    except RuntimeError:
+        pass
+
 def unregister():
     print("unregister()")
-    bpy.utils.unregister_class(CursorToSelected)
-    bpy.utils.unregister_class(SetOriginToSelected)
-    bpy.utils.unregister_class(MoveSelectedsToActive)
-    bpy.utils.unregister_class(MovePointsSelectedsToActive)
-    bpy.utils.unregister_class(MoveObjectToCursor)
-    bpy.utils.unregister_class(CreateCenterPotinOfSelecteds)
-    bpy.utils.unregister_class(DifferenceOfObjects)
-    bpy.utils.unregister_class(SlideVertAlongLine)
-    bpy.utils.unregister_class(CreateCrossLineAndFace)
-    bpy.utils.unregister_class(MoveBackFaces)
-    bpy.utils.unregister_class(SelectedVectorsCube)
-    bpy.utils.unregister_class(SelectedVectorsDistance)
-    bpy.utils.unregister_class(UIHelper)
 
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
     addon_keymaps.clear()
 
+    unregister_class(CursorToSelected)
+    unregister_class(SetOriginToSelected)
+    unregister_class(MoveSelectedsToActive)
+    unregister_class(MovePointsSelectedsToActive)
+    unregister_class(MoveObjectToCursor)
+    unregister_class(CreateCenterPotinOfSelecteds)
+    unregister_class(DifferenceOfObjects)
+    unregister_class(SlideVertAlongLine)
+    unregister_class(CreateCrossLineAndFace)
+    unregister_class(MoveBackFaces)
+    unregister_class(SelectedVectorsCube)
+    unregister_class(SelectedVectorsDistance)
+    unregister_class(OutputSelectedLocation)
+    unregister_class(UIHelper)
 
 if __name__ == "__main__":
     register()
